@@ -50,7 +50,7 @@ htmlcov/
 *.log
 
 # ----- dbt -----
-v2-dbt/target/
-v2-dbt/dbt_packages/
-v2-dbt/dbt_modules/
-v2-dbt/.user.yml
+V2-dbt/target/
+V2-dbt/dbt_packages/
+V2-dbt/dbt_modules/
+V2-dbt/.user.yml

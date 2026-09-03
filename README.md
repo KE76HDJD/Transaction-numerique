@@ -119,7 +119,7 @@ pip install dbt-postgres
 ### 2. Tester la connexion
 
 ```bash
-cd v2-dbt
+cd V2-dbt
 dbt debug
 ```
 
@@ -178,7 +178,7 @@ Transaction_numerique/
 |   +-- transformation/ <- Transformation Python (V1)
 |   +-- utils/        <- Utilitaires (connexion PostgreSQL)
 |
-+-- v2-dbt/           <- Transformation dbt (V2)
++-- V2-dbt/           <- Transformation dbt (V2)
 |   +-- models/
 |   |   +-- staging/
 |   |   +-- intermediate/

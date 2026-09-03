@@ -46,7 +46,7 @@ Transaction_numerique/
 │   │   └── test_database.py
 │   └── README.md
 │
-├── v2-dbt/                              # V2 : Transformation dbt
+├── V2-dbt/                              # V2 : Transformation dbt
 │   ├── models/
 │   │   ├── staging/
 │   │   │   ├── _sources.yml            # Definition des sources

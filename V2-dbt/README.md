@@ -84,7 +84,7 @@ dbt docs serve
 ## Fichiers
 
 ```
-v2-dbt/
+V2-dbt/
 ├── dbt_project.yml           # Configuration dbt
 ├── profiles.yml              # Connexion PostgreSQL
 ├── models/
