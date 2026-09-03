@@ -1,0 +1,81 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: "Staging: donnees brutes nettoyees et normalisees"
+    columns:
+      - name: id
+        description: "Identifiant unique de la transaction"
+        tests:
+          - unique
+          - not_null
+      - name: transaction_date
+        description: "Date et heure de la transaction"
+        tests:
+          - not_null
+      - name: transaction_date_only
+        description: "Date de la transaction (sans heure)"
+        tests:
+          - not_null
+      - name: type
+        description: "Type de transaction"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT']
+      - name: amount
+        description: "Montant de la transaction"
+        tests:
+          - not_null
+      - name: sender_id
+        description: "Identifiant de l'emetteur"
+        tests:
+          - not_null
+      - name: receiver_id
+        description: "Identifiant du destinataire"
+        tests:
+          - not_null
+      - name: is_fraud
+        description: "Indicateur de fraude (0 ou 1)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+
+  - name: int_daily_agg
+    description: "Intermediate: agregation quotidienne des transactions"
+    columns:
+      - name: transaction_date
+        description: "Date de la transaction"
+        tests:
+          - unique
+          - not_null
+      - name: total_transactions
+        description: "Nombre total de transactions"
+        tests:
+          - not_null
+      - name: total_amount
+        description: "Montant total des transactions"
+        tests:
+          - not_null
+
+  - name: mart_transactions
+    description: "Mart: table business-ready pour l'analyse et le reporting"
+    columns:
+      - name: transaction_date
+        description: "Date de la transaction"
+        tests:
+          - unique
+          - not_null
+      - name: total_transactions
+        description: "Nombre total de transactions"
+        tests:
+          - not_null
+      - name: total_amount
+        description: "Montant total des transactions"
+        tests:
+          - not_null
+      - name: fraud_count
+        description: "Nombre de fraudes detectees"
+        tests:
+          - not_null

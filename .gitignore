@@ -48,3 +48,9 @@ htmlcov/
 
 # ----- Logs -----
 *.log
+
+# ----- dbt -----
+v2-dbt/target/
+v2-dbt/dbt_packages/
+v2-dbt/dbt_modules/
+v2-dbt/.user.yml

@@ -1,0 +1,12 @@
+transaction_platform:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5434
+      user: kevin
+      pass: kevin123
+      dbname: transaction_db
+      schema: public
+      threads: 4

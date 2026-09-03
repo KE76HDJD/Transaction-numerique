@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: raw
+    database: transaction_db
+    schema: public
+    tables:
+      - name: transactions
+        description: "Table principale des transactions numeriques (chargee depuis le pipeline V1 batch)"
+        columns:
+          - name: id
+            description: "Identifiant auto-incremente"
+            tests:
+              - unique
+              - not_null
+          - name: step
+            description: "Unite de temps (1 step = 1 heure)"
+          - name: type
+            description: "Type de transaction"
+          - name: amount
+            description: "Montant de la transaction"
+          - name: name_orig
+            description: "Identifiant de l'emetteur"
+          - name: is_fraud
+            description: "1 si transaction frauduleuse, 0 sinon"
