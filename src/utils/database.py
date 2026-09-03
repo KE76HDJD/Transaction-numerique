@@ -20,6 +20,7 @@ Usage :
 import pandas as pd
 import os
 import sys
+import time
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
@@ -56,7 +57,6 @@ class DatabaseManager:
         """
         self.config = config or DEFAULT_CONFIG
         self.engine = None
-        self.connection = None
     
     def get_connection_string(self):
         """Construit la chaîne de connexion SQLAlchemy."""
@@ -72,8 +72,12 @@ class DatabaseManager:
         
         try:
             conn_str = self.get_connection_string()
-            self.engine = create_engine(conn_str)
-            self.connection = self.engine.connect()
+            self.engine = create_engine(
+                conn_str,
+                pool_pre_ping=True,
+                pool_size=10,
+                pool_recycle=300,
+            )
             print("Connexion reussie!")
             return True
         except Exception as e:
@@ -82,8 +86,6 @@ class DatabaseManager:
     
     def disconnect(self):
         """Ferme la connexion."""
-        if self.connection:
-            self.connection.close()
         if self.engine:
             self.engine.dispose()
         print("Connexion fermee.")
@@ -118,11 +120,12 @@ class DatabaseManager:
             print(f"ERREUR lors de la creation des tables : {e}")
             return False
     
-    def load_csv_file(self, csv_file):
+    def load_csv_file(self, csv_file, max_retries=3):
         """Charge un fichier CSV dans PostgreSQL.
         
         Args:
             csv_file: Chemin vers le fichier CSV
+            max_retries: Nombre max de tentatives en cas d'echec
         """
         print(f"\nChargement de {csv_file}...")
         
@@ -134,45 +137,56 @@ class DatabaseManager:
             print(f"ERREUR : Fichier CSV non trouve : {csv_path}")
             return 0
         
-        try:
-            # Lire le CSV
-            df = pd.read_csv(csv_path)
-            
-            # Renommer les colonnes pour correspondre a la table SQL
-            column_mapping = {
-                "transaction_date": "transaction_date",
-                "transaction_date_only": "transaction_date_only",
-                "transaction_hour": "transaction_hour",
-                "step": "step",
-                "type": "type",
-                "amount": "amount",
-                "nameOrig": "name_orig",
-                "oldbalanceOrg": "old_balance_org",
-                "newbalanceOrig": "new_balance_orig",
-                "nameDest": "name_dest",
-                "oldbalanceDest": "old_balance_dest",
-                "newbalanceDest": "new_balance_dest",
-                "isFraud": "is_fraud",
-                "isFlaggedFraud": "is_flagged_fraud",
-            }
-            df = df.rename(columns=column_mapping)
-            
-            # Charger dans PostgreSQL
-            rows_loaded = df.to_sql(
-                "transactions",
-                self.engine,
-                if_exists="append",
-                index=False,
-                method="multi",
-                chunksize=10000
-            )
-            
-            print(f"  {len(df):,} lignes chargees")
-            return len(df)
-            
-        except Exception as e:
-            print(f"ERREUR lors du chargement : {e}")
-            return 0
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Lire le CSV
+                df = pd.read_csv(csv_path)
+                
+                # Renommer les colonnes pour correspondre a la table SQL
+                column_mapping = {
+                    "transaction_date": "transaction_date",
+                    "transaction_date_only": "transaction_date_only",
+                    "transaction_hour": "transaction_hour",
+                    "step": "step",
+                    "type": "type",
+                    "amount": "amount",
+                    "nameOrig": "name_orig",
+                    "oldbalanceOrg": "old_balance_org",
+                    "newbalanceOrig": "new_balance_orig",
+                    "nameDest": "name_dest",
+                    "oldbalanceDest": "old_balance_dest",
+                    "newbalanceDest": "new_balance_dest",
+                    "isFraud": "is_fraud",
+                    "isFlaggedFraud": "is_flagged_fraud",
+                }
+                df = df.rename(columns=column_mapping)
+                
+                # Nettoyer le pool avant chaque chargement
+                self.engine.dispose()
+                
+                # Charger dans PostgreSQL
+                rows_loaded = df.to_sql(
+                    "transactions",
+                    self.engine,
+                    if_exists="append",
+                    index=False,
+                    chunksize=5000,
+                )
+                
+                print(f"  {len(df):,} lignes chargees")
+                return len(df)
+                
+            except Exception as e:
+                print(f"  Tentative {attempt}/{max_retries} echouee : {e}")
+                if attempt < max_retries:
+                    wait = attempt * 5
+                    print(f"  Nouvelle tentative dans {wait}s...")
+                    time.sleep(wait)
+                    # Nettoyer le pool avant retry
+                    self.engine.dispose()
+                else:
+                    print(f"  ERREUR : Abandon apres {max_retries} tentatives.")
+                    return 0
     
     def load_all_processed_files(self):
         """Charge tous les fichiers transformes."""
@@ -193,10 +207,15 @@ class DatabaseManager:
         print(f"Fichiers trouves : {len(files)}")
         
         total_rows = 0
-        for filename in files:
+        for i, filename in enumerate(files, 1):
             csv_path = f"data/processed/{filename}"
             rows = self.load_csv_file(csv_path)
             total_rows += rows
+            
+            # Disposal periodique pour nettoyer le pool
+            if i % 5 == 0:
+                self.engine.dispose()
+                print(f"  [Pool reset apres {i} fichiers]")
         
         print("\n" + "-" * 60)
         print(f"Total : {total_rows:,} lignes chargees")
@@ -211,34 +230,35 @@ class DatabaseManager:
         print("=" * 60)
         
         try:
-            # Compter les lignes
-            result = self.connection.execute(text("SELECT COUNT(*) FROM transactions"))
-            count = result.scalar()
-            print(f"Nombre total de transactions : {count:,}")
-            
-            # Compter par type
-            result = self.connection.execute(text("""
-                SELECT type, COUNT(*) as count 
-                FROM transactions 
-                GROUP BY type 
-                ORDER BY count DESC
-            """))
-            
-            print("\nPar type de transaction :")
-            for row in result:
-                print(f"  {row[0]:12s} | {row[1]:>10,}")
-            
-            # Compter les fraudes
-            result = self.connection.execute(text("""
-                SELECT is_fraud, COUNT(*) as count 
-                FROM transactions 
-                GROUP BY is_fraud
-            """))
-            
-            print("\nPar statut de fraude :")
-            for row in result:
-                label = "Non-fraude" if row[0] == 0 else "Fraude"
-                print(f"  {label:12s} | {row[1]:>10,}")
+            with self.engine.connect() as conn:
+                # Compter les lignes
+                result = conn.execute(text("SELECT COUNT(*) FROM transactions"))
+                count = result.scalar()
+                print(f"Nombre total de transactions : {count:,}")
+                
+                # Compter par type
+                result = conn.execute(text("""
+                    SELECT type, COUNT(*) as count 
+                    FROM transactions 
+                    GROUP BY type 
+                    ORDER BY count DESC
+                """))
+                
+                print("\nPar type de transaction :")
+                for row in result:
+                    print(f"  {row[0]:12s} | {row[1]:>10,}")
+                
+                # Compter les fraudes
+                result = conn.execute(text("""
+                    SELECT is_fraud, COUNT(*) as count 
+                    FROM transactions 
+                    GROUP BY is_fraud
+                """))
+                
+                print("\nPar statut de fraude :")
+                for row in result:
+                    label = "Non-fraude" if row[0] == 0 else "Fraude"
+                    print(f"  {label:12s} | {row[1]:>10,}")
             
             print("\nVerification reussie!")
             return True

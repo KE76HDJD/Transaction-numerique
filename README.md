@@ -2,64 +2,55 @@
 
 Plateforme de suivi et de traitement de transactions numeriques.
 
-## Objectif
+## Roadmap : 5 versions architecturales
 
-Construire un pipeline de donnees professionnel permettant de :
-1. Recevoir des donnees de transactions
-2. Stocker les donnees brutes
-3. Transformer et nettoyer les donnees
-4. Charger les donnees dans PostgreSQL
-5. Permettre l'analyse et la prise de decision
+| Version | Architecture | Ce qu'elle resout | Status |
+|---------|-------------|-------------------|--------|
+| **V1 — Batch** | Python + PostgreSQL | Extraction, chargement staging, transformation | OK |
+| **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | A venir |
+| **V3 — Airflow** | Airflow + dbt + PostgreSQL | Orchestration, retries, idempotence | A venir |
+| **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | A venir |
+| **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | A venir |
 
-## Architecture (Version 1 - Pipeline Batch)
+## Version 1 — Batch
 
-```
-Dataset Original
-       |
-       v
-transactions_original.csv
-       |
-       v
-  BATCH INGESTION
-       |
-       v
-Decoupage en lots
-       |
-       v
-   DATA RAW
-       |
-       v
-TRANSFORMATION
-       |
-       v
-DATA PROCESSED
-       |
-       v
- POSTGRESQL
-       |
-       v
-DONNEES EXPLOITABLES
-```
+### Qu'est-ce que cette version resout ?
 
-## Structure du projet
+V1 construit le pipeline batch de base : lire des fichiers CSV, les charger dans PostgreSQL (staging), puis les transformer en donnees business-ready.
+
+**Ce que V1 resout :**
+- Ingestion de donnees massives (6.36M lignes) par lots journaliers
+- Separation staging (donnees brutes) vs transformees (pretes a l'analyse)
+- Chargement robuste avec retry, pool de connexions, healthcheck
+
+**Ce que V1 ne resout PAS (c'est le role des versions suivantes) :**
+- Transformation SQL versionnee et testee (→ V2 dbt)
+- Orchestration automatique des dependances (→ V3 Airflow)
+- Traitement en temps reel (→ V4 Kafka)
+- Monitoring et qualite des donnees (→ V5 Qualite)
+
+### Architecture
 
 ```
-transaction-data-platform/
-|
-+-- data/
-|   +-- source/       <- Dataset original
-|   +-- raw/          <- Donnees brutes (lots)
-|   +-- processed/    <- Donnees transformees
-|   +-- sample/       <- Echantillon pour tests
-|
-+-- src/
-|   +-- ingestion/    <- Script d'ingestion batch
-|   +-- transformation/ <- Script de transformation
-|   +-- utils/        <- Utilitaires (connexion DB)
-|
-+-- sql/              <- Scripts SQL
-+-- tests/            <- Tests
-+-- docs/             <- Documentation
+Dataset Original (6.36M lignes, 471 Mo)
+       |
+       v
+  BATCH INGESTION (ingest_batch.py)
+       |  Split par fenetre de 24h
+       v
+  DATA RAW (day_01.csv ... day_31.csv)
+       |
+       v
+  TRANSFORMATION (transform_transactions.py)
+       |  step → timestamp, nettoyage, validation
+       v
+  DATA PROCESSED (transactions_day_01.csv ... transactions_day_31.csv)
+       |
+       v
+  POSTGRESQL (database.py → docker PostgreSQL 16)
+       |
+       v
+  DONNEES EXPLOITABLES (table transactions, 6.36M lignes)
 ```
 
 ## Installation
@@ -67,31 +58,113 @@ transaction-data-platform/
 ```bash
 # Cloner le depot
 git clone <url-du-depot>
-cd transaction-data-platform
+cd Transaction_numerique
 
 # Creer un environnement virtuel
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 # Installer les dependances
 pip install -r requirements.txt
 ```
 
-## Utilisation
+## Demarrage
+
+### 1. PostgreSQL (Docker)
 
 ```bash
-# 1. Ingestion des donnees
+# Demarrer PostgreSQL
+docker-compose up -d
+
+# Verifier que le container tourne
+docker ps
+
+# Verifier la connexion
+psql -h localhost -p 5434 -U kevin -d transaction_db
+# Mot de passe : kevin123
+```
+
+### 2. Pipeline batch
+
+```bash
+# Activer le venv (OBLIGATOIRE)
+source venv/bin/activate
+
+# 1. Ingestion (decoupe le CSV source en 31 fichiers)
 python -m src.ingestion.ingest_batch
 
-# 2. Transformation
+# 2. Transformation (ajoute timestamps, nettoie)
 python -m src.transformation.transform_transactions
 
-# 3. Chargement en base (a venir)
+# 3. Chargement PostgreSQL (charge les 31 fichiers)
+python -m src.utils.database
+```
+
+### 3. Tests
+
+```bash
+# Lancer les tests
+pytest tests/ -v
+```
+
+## Structure du projet
+
+```
+Transaction_numerique/
+|
++-- data/
+|   +-- source/       <- Dataset original (471 Mo)
+|   +-- raw/          <- Donnees brutes (31 fichiers)
+|   +-- processed/    <- Donnees transformees (31 fichiers)
+|   +-- sample/       <- Echantillon pour tests (100 lignes)
+|
++-- src/
+|   +-- ingestion/    <- Ingestion batch
+|   +-- transformation/ <- Transformation des transactions
+|   +-- utils/        <- Utilitaires (connexion PostgreSQL)
+|
++-- sql/              <- Scripts SQL (creation tables)
++-- tests/            <- Tests unitaires
++-- docs/             <- Documentation
++-- docker-compose.yml <- PostgreSQL Docker
++-- requirements.txt  <- Dependances Python
++-- .env              <- Configuration DB (non versionne)
 ```
 
 ## Dependances
 
 - Python 3.8+
-- pandas
-- sqlalchemy
-- psycopg2-binary
+- pandas (manipulation de donnees)
+- sqlalchemy (connexion PostgreSQL)
+- psycopg2-binary (driver PostgreSQL)
+- python-dotenv (variables d'environnement)
+- pytest (tests)
+
+## Schema de donnees
+
+```sql
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    transaction_date TIMESTAMP NOT NULL,
+    transaction_date_only DATE NOT NULL,
+    transaction_hour INTEGER NOT NULL,
+    step INTEGER NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
+    name_orig VARCHAR(20) NOT NULL,
+    old_balance_org NUMERIC(15, 2),
+    new_balance_orig NUMERIC(15, 2),
+    name_dest VARCHAR(20) NOT NULL,
+    old_balance_dest NUMERIC(15, 2),
+    new_balance_dest NUMERIC(15, 2),
+    is_fraud INTEGER NOT NULL DEFAULT 0,
+    is_flagged_fraud INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## Statistiques finales
+
+- **Total** : 6,362,620 transactions
+- **Types** : CASH_OUT (35.2%), PAYMENT (33.8%), CASH_IN (22.0%), TRANSFER (8.4%), DEBIT (0.7%)
+- **Fraudes** : 8,213 (0.13%)
