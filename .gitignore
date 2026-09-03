@@ -54,3 +54,8 @@ V2-dbt/target/
 V2-dbt/dbt_packages/
 V2-dbt/dbt_modules/
 V2-dbt/.user.yml
+
+# ----- Airflow -----
+V3-airflow/logs/
+V3-airflow/airflow.cfg
+V3-airflow/airflow.db
