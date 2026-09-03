@@ -1,0 +1,15 @@
+# ============================================
+# Transaction Data Platform - Dependencies
+# ============================================
+
+# Version 1 - Pipeline Batch
+
+# Manipulation de donnees
+pandas>=2.0.0
+
+# Connexion a PostgreSQL
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Variables d'environnement
+python-dotenv>=1.0.0

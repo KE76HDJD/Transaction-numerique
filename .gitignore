@@ -1,0 +1,47 @@
+# ============================================
+# Transaction Data Platform - .gitignore
+# ============================================
+
+# ----- Données volumineuses -----
+# Dataset original trop gros pour Git (471 Mo)
+data/source/*.csv
+
+# Données brutes générées par le pipeline
+data/raw/*.csv
+
+# Données transformées
+data/processed/*.csv
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ----- Environnement -----
+.env
+.venv/
+venv/
+env/
+
+# ----- Éditeurs / IDE -----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ----- Système -----
+.DS_Store
+Thumbs.db
+
+# ----- Jupyter -----
+.ipynb_checkpoints/
+
+# ----- Tests -----
+.coverage
+htmlcov/
+.pytest_cache/
