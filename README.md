@@ -9,7 +9,7 @@ Plateforme de suivi et de traitement de transactions numeriques.
 | **V1 — Batch** | Python + PostgreSQL | Extraction, chargement staging, transformation | OK |
 | **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | OK |
 | **V3 — Airflow** | Airflow + dbt + PostgreSQL | Orchestration, retries, idempotence | A venir |
-| **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | A venir |
+| **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | OK |
 | **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | A venir |
 
 ## V1 — Batch
@@ -130,6 +130,41 @@ docker compose -f docker-compose.airflow.yml down
 
 ---
 
+## V4 — Kafka (Streaming Temps Réel)
+
+### Qu'est-ce que cette version resout ?
+
+V4 remplace l'ingestion batch par un flux continu avec Kafka. Le CSV historique simule un flux temps reel.
+
+### Commandes V4
+
+```bash
+cd V4-kafka
+
+# 1. Creer la table PostgreSQL
+psql -h localhost -p 5434 -U kevin -d transaction_db \
+    -f sql/create_streamed_table.sql
+
+# 2. Demarrer Kafka
+docker compose -f docker-compose.kafka.yml up -d --build
+
+# 3. Lancer le Producer (terminal 1)
+docker compose -f docker-compose.kafka.yml exec kafka-producer \
+    python producer.py
+
+# 4. Lancer le Consumer (terminal 2)
+docker compose -f docker-compose.kafka.yml exec kafka-consumer \
+    python consumer.py
+
+# 5. UI Kafka
+http://localhost:8081
+
+# Arreter
+docker compose -f docker-compose.kafka.yml down
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -172,6 +207,11 @@ Transaction_numerique/
 +-- V3-airflow/                # V3 : Orchestration Docker
 |   +-- dags/                  # DAG Airflow
 |   +-- Dockerfile             # Image custom
+|
++-- V4-kafka/                  # V4 : Streaming Kafka
+|   +-- producer/              # CSV → Kafka
+|   +-- consumer/              # Kafka → PostgreSQL
+|   +-- sql/                   # Table transactions_streamed
 |
 +-- data/
 |   +-- source/                # Dataset original (471 Mo)
