@@ -10,7 +10,7 @@ Plateforme de suivi et de traitement de transactions numeriques.
 | **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | OK |
 | **V3 — Airflow** | Airflow + dbt + PostgreSQL | Orchestration, retries, idempotence | A venir |
 | **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | OK |
-| **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | A venir |
+| **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | OK |
 
 ## V1 — Batch
 
@@ -165,6 +165,33 @@ docker compose -f docker-compose.kafka.yml down
 
 ---
 
+## V5 — Quality & Monitoring
+
+### Qu'est-ce que cette version resout ?
+
+V5 ajoute la qualite des donnees et le monitoring au pipeline.
+
+### Commandes V5
+
+```bash
+cd V5-quality
+
+# 1. Lancer les checks qualite
+python -m V5-quality.scripts.run_quality_checks
+
+# 2. Demarrer les services (Prometheus + Grafana)
+docker compose -f docker-compose.quality.yml up -d
+
+# 3. UIs
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)
+
+# Arreter
+docker compose -f docker-compose.quality.yml down
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -212,6 +239,11 @@ Transaction_numerique/
 |   +-- producer/              # CSV → Kafka
 |   +-- consumer/              # Kafka → PostgreSQL
 |   +-- sql/                   # Table transactions_streamed
+|
++-- V5-quality/                # V5 : Quality & Monitoring
+|   +-- great_expectations/    # Data quality checks
+|   +-- monitoring/            # Prometheus + Grafana
+|   +-- scripts/               # Quality checks + metrics export
 |
 +-- data/
 |   +-- source/                # Dataset original (471 Mo)

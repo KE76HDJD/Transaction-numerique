@@ -1,0 +1,16 @@
+# ============================================
+# Grafana Dashboard Provisioning
+# ============================================
+
+apiVersion: 1
+
+providers:
+  - name: 'Transaction Quality'
+    orgId: 1
+    folder: 'Transaction Pipeline'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

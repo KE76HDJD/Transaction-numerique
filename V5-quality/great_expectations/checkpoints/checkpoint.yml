@@ -1,0 +1,42 @@
+# ============================================
+# Great Expectations Checkpoint
+# ============================================
+
+name: transactions_checkpoint
+config_version: 1.0
+class_name: SimpleCheckpoint
+run_name_template: "%Y%m%d-%H%M%S-transactions"
+
+expectation_suite_name: transactions_suite
+
+# Execution
+action_list:
+  - name: store_validation_result
+    action:
+      class_name: StoreValidationResultAction
+      target_store_name: validations_store
+
+  - name: update_data_docs
+    action:
+      class_name: UpdateDataDocsAction
+
+  - name: Slack notification (optional)
+    action:
+      class_name: SlackNotificationAction
+      slack_webhook: ${SLACK_WEBHOOK_URL}
+      notify_on: all
+      renderer:
+        class_name: SlackRenderer
+    # Uncomment to enable Slack notifications
+    # enabled: true
+    enabled: false
+
+# Batch Request
+batch_request:
+  datasource_name: transactions_db
+  data_connector_name: default_runtime_data_connector_name
+  data_asset_name: transactions
+  runtime_parameters:
+    query: "SELECT * FROM transactions LIMIT 10000"
+  batch_identifiers:
+    default_identifier_name: active_v100

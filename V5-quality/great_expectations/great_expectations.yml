@@ -1,0 +1,57 @@
+# ============================================
+# Great Expectations Configuration
+# ============================================
+
+# Configuration de l'environnement
+config_version: 3.0
+
+# Datasource - PostgreSQL
+datasources:
+  transactions_db:
+    class_name: Datasource
+    execution_engine:
+      class_name: PandasExecutionEngine
+    data_connectors:
+      default_runtime_data_connector_name:
+        class_name: RuntimeDataConnector
+        module_name: great_expectations.datasource.data_connector
+        datasource_name: transactions_db
+        batch_identifiers:
+          - default_identifier_name
+      default_inferred_data_connector_name:
+        class_name: InferredAssetSqlDataConnector
+        name: transactions
+        module_name: great_expectations.datasource.data_connector
+        datasource_name: transactions_db
+        table_name: transactions
+
+# Stores - Expectations, Results, Checkpoints
+stores:
+  expectations_store:
+    class_name: ExpectationsStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: expectations/
+  
+  validations_store:
+    class_name: ValidationsStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: validations/
+  
+  checkpoint_store:
+    class_name: CheckpointStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: checkpoints/
+
+# Data Docs
+data_docs_sites:
+  local_site:
+    class_name: SiteBuilder
+    show_how_to_links: false
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: data_docs/
+    site_index_builder:
+      class_name: DefaultSiteIndexBuilder

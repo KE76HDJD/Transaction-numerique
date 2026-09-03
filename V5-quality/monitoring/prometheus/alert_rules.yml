@@ -1,0 +1,46 @@
+# ============================================
+# Prometheus Alert Rules
+# ============================================
+
+groups:
+  - name: transaction_alerts
+    rules:
+      # Qualite trop basse
+      - alert: QualityScoreTooLow
+        expr: tx_quality_score < 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Score de qualite trop bas"
+          description: "Le score de qualite est a {{ $value }}% (seuil: 80%)"
+
+      # Taux de fraude eleve
+      - alert: HighFraudRate
+        expr: tx_fraud_rate > 0.02
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux de fraude eleve"
+          description: "Le taux de fraude est a {{ $value }}% (seuil: 2%)"
+
+      # Pipeline en erreur
+      - alert: PipelineErrors
+        expr: rate(tx_pipeline_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Erreurs dans le pipeline"
+          description: "{{ $value }} erreurs/seconde"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="transaction-quality"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service quality down"
+          description: "Le service de qualite n'est plus disponible"

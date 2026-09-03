@@ -1,0 +1,38 @@
+# ============================================
+# Prometheus Configuration
+# ============================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rules de alerte
+rule_files:
+  - "alert_rules.yml"
+
+# Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Scrape configs
+scrape_configs:
+  # Prometheus lui-meme
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Transaction Quality Metrics
+  - job_name: 'transaction-quality'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['metrics-exporter:8000']
+        labels:
+          service: 'transaction-pipeline'
+          environment: 'production'
+
+  # Node Exporter (optionnel)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']

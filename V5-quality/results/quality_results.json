@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-09-03T21:18:40.476995",
+  "score": 100.0,
+  "results": [
+    {
+      "expectation": "not_null(amount)",
+      "passed": true,
+      "null_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "not_null(type)",
+      "passed": true,
+      "null_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "not_null(name_orig)",
+      "passed": true,
+      "null_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "in_set(type)",
+      "passed": true,
+      "invalid_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "between(amount, 0, 10000000)",
+      "passed": true,
+      "out_of_range_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "regex(name_orig, ^C[0-9]+$)",
+      "passed": true,
+      "non_matching_count": 0,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "unique(id)",
+      "passed": true,
+      "duplicate_count": 0,
+      "unique_count": 100000,
+      "total": 100000,
+      "success_rate": 1.0
+    },
+    {
+      "expectation": "row_count_between(6M, 7M)",
+      "passed": true,
+      "actual_count": 6362620
+    }
+  ]
+}

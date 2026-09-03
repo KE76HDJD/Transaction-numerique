@@ -1,0 +1,89 @@
+{
+  "expectation_suite_name": "transactions_suite",
+  "data_asset_name": "transactions",
+  "meta": {
+    "description": "Expectations pour la table transactions - V5 Quality",
+    "version": "1.0"
+  },
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "amount"
+      },
+      "meta": {
+        "description": "Le montant ne doit pas etre null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "type"
+      },
+      "meta": {
+        "description": "Le type de transaction ne doit pas etre null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "name_orig"
+      },
+      "meta": {
+        "description": "L'emetteur ne doit pas etre null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "type",
+        "value_set": ["PAYMENT", "TRANSFER", "CASH_OUT", "CASH_IN", "DEBIT"]
+      },
+      "meta": {
+        "description": "Types de transactions valides uniquement"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "amount",
+        "min_value": 0,
+        "max_value": 10000000,
+        "mostly": 0.99
+      },
+      "meta": {
+        "description": "Montants entre 0 et 10M (99% des cas)"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_regex",
+      "kwargs": {
+        "column": "name_orig",
+        "regex": "^C[0-9]+$",
+        "mostly": 0.95
+      },
+      "meta": {
+        "description": "Format compte emetteur: C + chiffres"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "id"
+      },
+      "meta": {
+        "description": "Pas de doublons sur l'ID"
+      }
+    },
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 6000000,
+        "max_value": 7000000
+      },
+      "meta": {
+        "description": "Entre 6M et 7M lignes attendues"
+      }
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+# ============================================
+# V5 — Quality & Monitoring Docker Compose
+# ============================================
+# Usage:
+#   docker compose -f docker-compose.quality.yml up -d --build
+#   docker compose -f docker-compose.quality.yml down
+# ============================================
+
+services:
+  # --- Great Expectations ---
+  great-expectations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: transaction-quality
+    volumes:
+      - .:/app
+    environment:
+      PG_HOST: host.docker.internal
+      PG_PORT: "5434"
+      PG_DB: transaction_db
+      PG_USER: kevin
+      PG_PASSWORD: kevin123
+    command: python scripts/run_quality_checks.py
+    restart: "no"
+
+  # --- Prometheus ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transaction-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+    restart: always
+
+  # --- Grafana ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transaction-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on:
+      - prometheus
+    restart: always
+
+  # --- Metrics Exporter ---
+  metrics-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: transaction-metrics
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      PG_HOST: host.docker.internal
+      PG_PORT: "5434"
+      PG_DB: transaction_db
+      PG_USER: kevin
+      PG_PASSWORD: kevin123
+    command: python scripts/export_metrics.py
+    restart: always
+
+volumes:
+  prometheus_data:
+  grafana_data:
