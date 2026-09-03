@@ -101,6 +101,35 @@ dbt docs serve
 
 ---
 
+## V3 — Airflow (Orchestration Docker)
+
+### Qu'est-ce que cette version resout ?
+
+V3 orchestre automatiquement le pipeline avec Docker Airflow : ingestion → transformation → load → dbt.
+
+### Commandes V3
+
+```bash
+# Demarrer Airflow (Docker)
+docker compose -f docker-compose.airflow.yml up -d --build
+
+# Voir les services
+docker compose -f docker-compose.airflow.yml ps
+
+# UI Airflow
+http://localhost:8080 (admin/admin)
+
+# Lancer le pipeline depuis l'UI
+# ou en ligne de commande :
+docker compose -f docker-compose.airflow.yml exec airflow-webserver \
+    airflow dags trigger transaction_pipeline
+
+# Arreter
+docker compose -f docker-compose.airflow.yml down
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -139,6 +168,10 @@ Transaction_numerique/
 |   |   +-- intermediate/      # Agregation
 |   |   +-- marts/             # Business-ready
 |   +-- tests/                 # Tests dbt (not_null, unique, etc.)
+|
++-- V3-airflow/                # V3 : Orchestration Docker
+|   +-- dags/                  # DAG Airflow
+|   +-- Dockerfile             # Image custom
 |
 +-- data/
 |   +-- source/                # Dataset original (471 Mo)

@@ -59,3 +59,4 @@ V2-dbt/.user.yml
 V3-airflow/logs/
 V3-airflow/airflow.cfg
 V3-airflow/airflow.db
+V3-airflow/*.pyc

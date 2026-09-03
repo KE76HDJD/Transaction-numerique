@@ -1,99 +1,105 @@
-# V3 — Airflow (Orchestration)
+# V3 — Airflow (Orchestration Docker)
 
 ## Qu'est-ce que cette version resout ?
 
-V3 ajoute l'**orchestration automatique** du pipeline. Au lieu de lancer les commandes manuellement, un DAG Airflow enchaîne les tâches automatiquement.
+V3 ajoute l'**orchestration automatique** du pipeline avec Docker. Le DAG Airflow enchaîne les tâches : ingestion → transformation → load → dbt run → dbt test.
 
-### Ce que V3 ajoute par rapport a V2
+### Services Docker
 
-| Avant (V2) | Apres (V3) |
-|------------|------------|
-| Lancement manuel des commandes | DAG automatique |
-| Pas de retries | 2 retries automatiques |
-| Pas de planning | Cron schedule possible |
-| Pas de monitoring | UI Airflow pour suivre |
+| Service | Port | Rôle |
+|---------|------|------|
+| airflow-webserver | 8080 | UI Airflow |
+| airflow-scheduler | - | Execute les DAGs |
+| airflow-worker | - | Execute les tâches |
+| airflow-triggerer | - | Gère les triggers |
+| airflow-flower | 5555 | Monitoring Celery |
+| postgres-airflow | 5433 | Metadata Airflow |
+| redis | 6379 | Broker Celery |
 
-### Ce que V3 ne resout PAS
+## Démarrage
 
-- Traitement temps reel → V4 (Kafka)
-- Monitoring avance → V5
-
-## Architecture du DAG
-
-```
-wait_for_source
-      │
-      ▼
-  ingest_batch        ← Split CSV en 31 fichiers
-      │
-      ▼
-transform_transactions ← step → timestamp
-      │
-      ▼
-  load_postgresql      ← Charge en base
-      │
-      ▼
-    dbt_run            ← stg → int → mart
-      │
-      ▼
-   dbt_test            ← 23 tests
-```
-
-## Utilisation
-
-### 1. Initialiser Airflow
+### 1. Build et démarrage
 
 ```bash
-# Activer le venv
-source venv/bin/activate
+# Depuis la racine du projet
+docker compose -f docker-compose.airflow.yml up -d --build
 
-# Initialiser la base de données Airflow
-airflow db migrate
-
-# Créer un utilisateur admin
-airflow users create \
-    --username admin \
-    --firstname Kevin \
-    --lastname Admin \
-    --role Admin \
-    --email admin@example.com \
-    --password admin
+# Vérifier que tous les services tournent
+docker compose -f docker-compose.airflow.yml ps
 ```
 
-### 2. Lancer Airflow
-
-```bash
-# Terminal 1 : Scheduler
-airflow scheduler
-
-# Terminal 2 : Webserver (UI)
-airflow webserver --port 8080
-```
-
-### 3. Accéder à l'UI
+### 2. Accéder à l'UI
 
 ```
 http://localhost:8080
 Login: admin / admin
 ```
 
-### 4. Tester le DAG
-
-```bash
-# Tester sans Airflow
-airflow dags test transaction_pipeline
-
-# Vérifier le DAG
-airflow dags list
-airflow dags show transaction_pipeline
-```
-
-### 5. Activer le DAG
+### 3. Trouver le DAG
 
 Dans l'UI Airflow :
-1. Trouver `transaction_pipeline`
+1. Chercher `transaction_pipeline`
 2. Activer le toggle "Active"
-3. Le DAG s'exécutera selon le schedule (ou manuellement)
+3. Le DAG est prêt à être lancé
+
+### 4. Lancer le pipeline
+
+Dans l'UI :
+- Cliquer sur `transaction_pipeline`
+- Cliquer sur "▶ Trigger DAG"
+- Suivre l'exécution en temps réel
+
+Ou en ligne de commande :
+
+```bash
+docker compose -f docker-compose.airflow.yml exec airflow-webserver \
+    airflow dags trigger transaction_pipeline
+```
+
+## Commandes utiles
+
+```bash
+# Voir les logs
+docker compose -f docker-compose.airflow.yml logs -f
+
+# Voir les logs d'un service
+docker compose -f docker-compose.airflow.yml logs -f airflow-scheduler
+
+# Lister les DAGs
+docker compose -f docker-compose.airflow.yml exec airflow-webserver \
+    airflow dags list
+
+# Tester un DAG
+docker compose -f docker-compose.airflow.yml exec airflow-webserver \
+    airflow dags test transaction_pipeline
+
+# Arrêter
+docker compose -f docker-compose.airflow.yml down
+
+# Tout supprimer (y compris les données)
+docker compose -f docker-compose.airflow.yml down -v
+```
+
+## Le DAG — 5 tâches
+
+```
+ingest_batch
+      │  Split CSV → 31 fichiers
+      ▼
+transform_transactions
+      │  step → timestamp, nettoyage
+      ▼
+  load_postgresql
+      │  Charge 6.36M lignes
+      ▼
+    dbt_run
+      │  stg → int → mart (SQL)
+      ▼
+   dbt_test
+      │  23 tests qualite
+      ▼
+   ✓ TERMINE
+```
 
 ## Fichiers
 
@@ -102,25 +108,38 @@ V3-airflow/
 ├── dags/
 │   └── transaction_pipeline.py   # Le DAG
 ├── logs/                         # Logs Airflow
-├── plugins/                      # Plugins custom
+├── plugins/                      # Plugins
+├── Dockerfile                    # Image custom
+├── requirements.txt              # Deps Python
 └── README.md
+
+docker-compose.airflow.yml        # Config Docker
 ```
 
-## Commandes utiles
+## Architecture
 
-```bash
-# Voir les DAGs
-airflow dags list
-
-# Voir un DAG
-airflow dags show transaction_pipeline
-
-# Tester un DAG
-airflow dags test transaction_pipeline
-
-# Voir les tasks
-airflow tasks list transaction_pipeline
-
-# Exécuter une task
-airflow tasks test transaction_pipeline ingest_batch
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Docker Network                        │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  webserver   │  │  scheduler   │  │   worker     │  │
+│  │  (UI :8080)  │  │              │  │  (Celery)    │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
+│         │                 │                 │           │
+│         ▼                 ▼                 ▼           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  postgres    │  │    redis     │  │   flower     │  │
+│  │  (metadata)  │  │  (broker)    │  │  (monitor)   │  │
+│  │  :5433       │  │  :6379       │  │  :5555       │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        │ host.docker.internal
+                        ▼
+              ┌──────────────────┐
+              │   PostgreSQL     │
+              │   (transaction)  │
+              │   :5434          │
+              └──────────────────┘
 ```

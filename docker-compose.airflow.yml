@@ -1,0 +1,161 @@
+# ============================================
+# V3 — Airflow Docker Compose (Production)
+# ============================================
+# Usage:
+#   docker compose -f docker-compose.airflow.yml up -d
+#   docker compose -f docker-compose.airflow.yml down
+#   docker compose -f docker-compose.airflow.yml logs -f
+# ============================================
+
+x-airflow-image: &airflow-image apache/airflow:3.3.1
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: V3-airflow/Dockerfile
+  environment:
+    # --- PostgreSQL (Airflow DB) ---
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__DATABASE__LOAD_EXAMPLES: "false"
+    
+    # --- Redis (Celery Broker) ---
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    
+    # --- Folders ---
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    
+    # --- Backend PostgreSQL (transaction_db) via host.docker.internal ---
+    AIRFLOW_CONN_POSTGRES_TRANSACTION: postgresql://kevin:kevin123@host.docker.internal:5434/transaction_db
+    
+    # --- Init ---
+    _AIRFLOW_DB_MIGRATE: "true"
+    _AIRFLOW_WWW_USER_CREATE: "true"
+    _AIRFLOW_WWW_USER_USERNAME: admin
+    _AIRFLOW_WWW_USER_PASSWORD: admin
+  volumes:
+    - ./V3-airflow/dags:/opt/airflow/dags
+    - ./V3-airflow/logs:/opt/airflow/logs
+    - ./V3-airflow/plugins:/opt/airflow/plugins
+    - .:/opt/airflow/project:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "0:0"
+  depends_on:
+    postgres-airflow:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  # --- Init DB + Create Admin ---
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin || true
+    restart: "no"
+
+  # --- Scheduler ---
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # --- Webserver (UI) ---
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # --- Triggerer ---
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type TriggererJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # --- Worker Celery ---
+  airflow-worker:
+    <<: *airflow-common
+    command: celery worker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # --- PostgreSQL (Airflow metadata) ---
+  postgres-airflow:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+    volumes:
+      - postgres-airflow-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # --- Redis (Celery Broker) ---
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # --- Flower (Monitoring Celery) ---
+  airflow-flower:
+    <<: *airflow-common
+    command: celery flower
+    ports:
+      - "5555:5555"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5555/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+volumes:
+  postgres-airflow-data:
