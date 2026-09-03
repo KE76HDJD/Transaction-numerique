@@ -130,7 +130,7 @@ class DatabaseManager:
         print(f"\nChargement de {csv_file}...")
         
         # Chemin absolu
-        base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
+        base_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..")
         csv_path = os.path.join(base_dir, csv_file)
         
         if not os.path.exists(csv_path):
@@ -195,7 +195,7 @@ class DatabaseManager:
         print("=" * 60)
         
         # Chemin vers le dossier processed
-        base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
+        base_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..")
         processed_dir = os.path.join(base_dir, "data", "processed")
         
         # Lister les fichiers

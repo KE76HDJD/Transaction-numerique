@@ -25,12 +25,7 @@ Python + PostgreSQL       SQL models + tests       Orchestration DAG
 ```
 Transaction_numerique/
 │
-├── shared/                              # Infrastructure commune
-│   ├── docker-compose.yml              # PostgreSQL + tous les services
-│   ├── .env                            # Configuration (credentials)
-│   └── requirements.txt                # Dependances Python
-│
-├── v1-batch/                            # V1 : Pipeline batch
+├── V1-batch/                            # V1 : Pipeline batch
 │   ├── src/
 │   │   ├── ingestion/
 │   │   │   └── ingest_batch.py         # Split CSV → lots quotidiens
@@ -61,13 +56,13 @@ Transaction_numerique/
 │   ├── profiles.yml                    # Connexion PostgreSQL
 │   └── README.md
 │
-├── v3-airflow/                          # V3 : Orchestration
+├── V3-airflow/                          # V3 : Orchestration
 │   ├── dags/
 │   │   └── transaction_pipeline.py     # DAG Airflow
 │   ├── plugins/                         # Plugins custom
 │   └── README.md
 │
-├── v4-kafka/                            # V4 : Streaming
+├── V4-kafka/                            # V4 : Streaming
 │   ├── producer/
 │   │   └── kafka_producer.py           # Envoie transactions
 │   ├── consumer/
@@ -75,7 +70,7 @@ Transaction_numerique/
 │   ├── docker-compose.kafka.yml        # Services Kafka
 │   └── README.md
 │
-├── v5-quality/                          # V5 : Qualite & Monitoring
+├── V5-quality/                          # V5 : Qualite & Monitoring
 │   ├── great_expectations/
 │   │   ├── expectations/
 │   │   └── great_expectations.yml
@@ -84,13 +79,16 @@ Transaction_numerique/
 │   │   └── grafana/
 │   └── README.md
 │
-├── docs/
-│   ├── guide_technique_V1.md           # Guide technique V1
-│   ├── guide_technique_V1.pdf          # Version PDF
-│   ├── data_analysis.md                # Analyse du dataset
-│   └── plan_5_versions.md              # Ce fichier
+├── data/
+│   ├── source/       <- Dataset original
+│   ├── raw/          <- Donnees brutes (lots)
+│   ├── processed/    <- Donnees transformees
+│   └── sample/       <- Echantillon pour tests
 │
-└── README.md                           # README principal
+├── docs/             <- Documentation
+├── docker-compose.yml
+├── requirements.txt
+└── .env
 ```
 
 ---

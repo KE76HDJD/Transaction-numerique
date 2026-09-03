@@ -25,7 +25,7 @@ import sys
 # ============================================
 
 # Chemins relatifs au script
-BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..")
 SOURCE_DIR = os.path.join(BASE_DIR, "data", "source")
 RAW_DIR = os.path.join(BASE_DIR, "data", "raw")
 

@@ -7,12 +7,12 @@ Plateforme de suivi et de traitement de transactions numeriques.
 | Version | Architecture | Ce qu'elle resout | Status |
 |---------|-------------|-------------------|--------|
 | **V1 — Batch** | Python + PostgreSQL | Extraction, chargement staging, transformation | OK |
-| **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | A venir |
+| **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | OK |
 | **V3 — Airflow** | Airflow + dbt + PostgreSQL | Orchestration, retries, idempotence | A venir |
 | **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | A venir |
 | **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | A venir |
 
-## Version 1 — Batch
+## V1 — Batch
 
 ### Qu'est-ce que cette version resout ?
 
@@ -23,11 +23,11 @@ V1 construit le pipeline batch de base : lire des fichiers CSV, les charger dans
 - Separation staging (donnees brutes) vs transformees (pretes a l'analyse)
 - Chargement robuste avec retry, pool de connexions, healthcheck
 
-**Ce que V1 ne resout PAS (c'est le role des versions suivantes) :**
-- Transformation SQL versionnee et testee (→ V2 dbt)
-- Orchestration automatique des dependances (→ V3 Airflow)
-- Traitement en temps reel (→ V4 Kafka)
-- Monitoring et qualite des donnees (→ V5 Qualite)
+**Ce que V1 ne resout PAS :**
+- Transformation SQL versionnee et testee → V2 dbt
+- Orchestration automatique → V3 Airflow
+- Traitement temps reel → V4 Kafka
+- Monitoring et qualite → V5
 
 ### Architecture
 
@@ -53,6 +53,54 @@ Dataset Original (6.36M lignes, 471 Mo)
   DONNEES EXPLOITABLES (table transactions, 6.36M lignes)
 ```
 
+### Commandes V1
+
+```bash
+# Activer le venv
+source venv/bin/activate
+
+# 1. Ingestion (decoupe le CSV source en 31 fichiers)
+python -m V1-batch.src.ingestion.ingest_batch
+
+# 2. Transformation (ajoute timestamps, nettoie)
+python -m V1-batch.src.transformation.transform_transactions
+
+# 3. Chargement PostgreSQL
+python -m V1-batch.src.utils.database
+
+# 4. Tests
+pytest V1-batch/tests/ -v
+```
+
+---
+
+## V2 — dbt (Transformation as Code)
+
+### Qu'est-ce que cette version resout ?
+
+V2 remplace le script Python de transformation par des **modeles SQL dbt** : tests integres, documentation auto, lineage.
+
+### Commandes V2
+
+```bash
+cd V2-dbt
+
+# Verifier la connexion
+dbt debug
+
+# Executer les modeles SQL (stg → int → mart)
+dbt run
+
+# Lancer les 23 tests
+dbt test
+
+# Generer la documentation
+dbt docs generate
+dbt docs serve
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -66,100 +114,10 @@ source venv/bin/activate
 
 # Installer les dependances
 pip install -r requirements.txt
-```
+pip install dbt-postgres
 
-## Demarrage
-
-### 1. PostgreSQL (Docker)
-
-```bash
 # Demarrer PostgreSQL
 docker-compose up -d
-
-# Verifier que le container tourne
-docker ps
-
-# Verifier la connexion
-psql -h localhost -p 5434 -U kevin -d transaction_db
-# Mot de passe : kevin123
-```
-
-### 2. Pipeline batch
-
-```bash
-# Activer le venv (OBLIGATOIRE)
-source venv/bin/activate
-
-# 1. Ingestion (decoupe le CSV source en 31 fichiers)
-python -m src.ingestion.ingest_batch
-
-# 2. Transformation (ajoute timestamps, nettoie)
-python -m src.transformation.transform_transactions
-
-# 3. Chargement PostgreSQL (charge les 31 fichiers)
-python -m src.utils.database
-```
-
-### 3. Tests V1
-
-```bash
-# Lancer les tests Python
-pytest tests/ -v
-```
-
-## V2 — Transformation dbt
-
-### 1. Installer dbt
-
-```bash
-source venv/bin/activate
-pip install dbt-postgres
-```
-
-### 2. Tester la connexion
-
-```bash
-cd V2-dbt
-dbt debug
-```
-
-### 3. Executer les modeles
-
-```bash
-# Lancer tous les modeles SQL (stg → int → mart)
-dbt run
-```
-
-### 4. Lancer les tests
-
-```bash
-# Lancer les 23 tests (not_null, unique, accepted_values, etc.)
-dbt test
-```
-
-### 5. Documentation
-
-```bash
-# Generer la documentation HTML
-dbt docs generate
-
-# Ouvrir dans le navigateur
-dbt docs serve
-```
-
-### Commandes utiles
-
-```bash
-# Executer un seul modele
-dbt run --select stg_transactions
-
-# Executer les tests d'un seul modele
-dbt test --select mart_transactions
-
-# Nettoyer et tout relancer
-dbt clean
-dbt run
-dbt test
 ```
 
 ## Structure du projet
@@ -167,30 +125,30 @@ dbt test
 ```
 Transaction_numerique/
 |
-+-- data/
-|   +-- source/       <- Dataset original (471 Mo)
-|   +-- raw/          <- Donnees brutes (31 fichiers)
-|   +-- processed/    <- Donnees transformees (31 fichiers)
-|   +-- sample/       <- Echantillon pour tests (100 lignes)
++-- V1-batch/                  # V1 : Pipeline batch Python
+|   +-- src/
+|   |   +-- ingestion/         # Split CSV → lots quotidiens
+|   |   +-- transformation/    # step → timestamp (Python)
+|   |   +-- utils/             # Load PostgreSQL
+|   +-- sql/                   # Schema staging
+|   +-- tests/                 # Tests unitaires Python
 |
-+-- src/
-|   +-- ingestion/    <- Ingestion batch (V1)
-|   +-- transformation/ <- Transformation Python (V1)
-|   +-- utils/        <- Utilitaires (connexion PostgreSQL)
-|
-+-- V2-dbt/           <- Transformation dbt (V2)
++-- V2-dbt/                    # V2 : Transformation dbt
 |   +-- models/
-|   |   +-- staging/
-|   |   +-- intermediate/
-|   |   +-- marts/
-|   +-- tests/
+|   |   +-- staging/           # Nettoyage
+|   |   +-- intermediate/      # Agregation
+|   |   +-- marts/             # Business-ready
+|   +-- tests/                 # Tests dbt (not_null, unique, etc.)
 |
-+-- sql/              <- Scripts SQL (creation tables)
-+-- tests/            <- Tests unitaires Python
-+-- docs/             <- Documentation
-+-- docker-compose.yml <- PostgreSQL Docker
-+-- requirements.txt  <- Dependances Python
-+-- .env              <- Configuration DB (non versionne)
++-- data/
+|   +-- source/                # Dataset original (471 Mo)
+|   +-- raw/                   # Donnees brutes (31 fichiers)
+|   +-- processed/             # Donnees transformees (31 fichiers)
+|
++-- docs/                      # Documentation
++-- docker-compose.yml         # PostgreSQL Docker
++-- requirements.txt           # Dependances Python
++-- .env                       # Configuration DB (non versionne)
 ```
 
 ## Dependances
@@ -201,6 +159,7 @@ Transaction_numerique/
 - psycopg2-binary (driver PostgreSQL)
 - python-dotenv (variables d'environnement)
 - pytest (tests)
+- dbt-postgres (transformation SQL)
 
 ## Schema de donnees
 
@@ -225,7 +184,7 @@ CREATE TABLE transactions (
 );
 ```
 
-## Statistiques finales
+## Statistiques
 
 - **Total** : 6,362,620 transactions
 - **Types** : CASH_OUT (35.2%), PAYMENT (33.8%), CASH_IN (22.0%), TRANSFER (8.4%), DEBIT (0.7%)

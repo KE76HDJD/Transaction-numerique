@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 # ============================================
 
 # Chemins
-BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..")
 RAW_DIR = os.path.join(BASE_DIR, "data", "raw")
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 
