@@ -100,11 +100,66 @@ python -m src.transformation.transform_transactions
 python -m src.utils.database
 ```
 
-### 3. Tests
+### 3. Tests V1
 
 ```bash
-# Lancer les tests
+# Lancer les tests Python
 pytest tests/ -v
+```
+
+## V2 — Transformation dbt
+
+### 1. Installer dbt
+
+```bash
+source venv/bin/activate
+pip install dbt-postgres
+```
+
+### 2. Tester la connexion
+
+```bash
+cd v2-dbt
+dbt debug
+```
+
+### 3. Executer les modeles
+
+```bash
+# Lancer tous les modeles SQL (stg → int → mart)
+dbt run
+```
+
+### 4. Lancer les tests
+
+```bash
+# Lancer les 23 tests (not_null, unique, accepted_values, etc.)
+dbt test
+```
+
+### 5. Documentation
+
+```bash
+# Generer la documentation HTML
+dbt docs generate
+
+# Ouvrir dans le navigateur
+dbt docs serve
+```
+
+### Commandes utiles
+
+```bash
+# Executer un seul modele
+dbt run --select stg_transactions
+
+# Executer les tests d'un seul modele
+dbt test --select mart_transactions
+
+# Nettoyer et tout relancer
+dbt clean
+dbt run
+dbt test
 ```
 
 ## Structure du projet
@@ -119,12 +174,19 @@ Transaction_numerique/
 |   +-- sample/       <- Echantillon pour tests (100 lignes)
 |
 +-- src/
-|   +-- ingestion/    <- Ingestion batch
-|   +-- transformation/ <- Transformation des transactions
+|   +-- ingestion/    <- Ingestion batch (V1)
+|   +-- transformation/ <- Transformation Python (V1)
 |   +-- utils/        <- Utilitaires (connexion PostgreSQL)
 |
++-- v2-dbt/           <- Transformation dbt (V2)
+|   +-- models/
+|   |   +-- staging/
+|   |   +-- intermediate/
+|   |   +-- marts/
+|   +-- tests/
+|
 +-- sql/              <- Scripts SQL (creation tables)
-+-- tests/            <- Tests unitaires
++-- tests/            <- Tests unitaires Python
 +-- docs/             <- Documentation
 +-- docker-compose.yml <- PostgreSQL Docker
 +-- requirements.txt  <- Dependances Python
