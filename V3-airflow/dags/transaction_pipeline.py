@@ -15,7 +15,7 @@ Usage:
 
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.providers.standard.operators.bash import BashOperator
+from airflow.operators.bash import BashOperator
 
 # ============================================
 # Configuration

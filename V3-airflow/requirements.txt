@@ -1,3 +1,1 @@
-# Airflow extra dependencies
-apache-airflow-providers-postgres>=15.0.0
-apache-airflow-providers-docker>=4.0.0
+# Airflow extra dependencies (minimal - only what DAG needs)
