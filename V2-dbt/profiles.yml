@@ -3,7 +3,7 @@ transaction_platform:
   outputs:
     dev:
       type: postgres
-      host: localhost
+      host: "{{ env_var('DB_HOST', 'localhost') }}"
       port: 5434
       user: kevin
       pass: kevin123

@@ -112,7 +112,6 @@ class DatabaseManager:
             
             with self.engine.connect() as conn:
                 conn.execute(text(sql_content))
-                conn.commit()
             
             print("Tables creees avec succes!")
             return True
@@ -223,6 +222,27 @@ class DatabaseManager:
         
         return total_rows
     
+    def ensure_tables_exist(self):
+        """Verifie si la table existe. Si oui, TRUNCATE. Si non, CREATE."""
+        print("\nVerification de la table transactions...")
+        
+        try:
+            with self.engine.connect() as conn:
+                exists = conn.execute(text(
+                    "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='transactions')"
+                )).scalar()
+                
+                if exists:
+                    conn.execute(text("TRUNCATE TABLE transactions"))
+                    print("Table existante → TRUNCATE effectue")
+                    return True
+                else:
+                    return self.create_tables()
+                    
+        except Exception as e:
+            print(f"ERREUR lors de la verification : {e}")
+            return False
+    
     def verify_loading(self):
         """Verifie que les donnees ont ete chargees correctement."""
         print("\n" + "=" * 60)
@@ -300,9 +320,24 @@ def main():
         print("Verifiez que le serveur est demarre.")
         sys.exit(1)
     
-    # Creer les tables
-    if not db.create_tables():
-        print("Impossible de creer les tables.")
+    # Fast-skip si deja charge (demo rapide)
+    try:
+        with db.engine.connect() as conn:
+            cnt = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar()
+            if cnt and cnt >= 6362620:
+                print(f"Table deja chargee ({cnt:,} lignes) → skip TRUNCATE/LOAD (demo rapide)")
+                db.verify_loading()
+                db.disconnect()
+                print("\n" + "=" * 60)
+                print("CHARGEMENT TERMINE (skip)")
+                print("=" * 60)
+                return
+    except Exception:
+        pass  # table inexistante → suite normale
+
+    # Creer ou preparer les tables
+    if not db.ensure_tables_exist():
+        print("Impossible de preparer les tables.")
         sys.exit(1)
     
     # Charger les donnees
