@@ -110,7 +110,7 @@ class DatabaseManager:
             with open(sql_path, "r") as f:
                 sql_content = f.read()
             
-            with self.engine.connect() as conn:
+            with self.engine.begin() as conn:
                 conn.execute(text(sql_content))
             
             print("Tables creees avec succes!")
@@ -227,7 +227,7 @@ class DatabaseManager:
         print("\nVerification de la table transactions...")
         
         try:
-            with self.engine.connect() as conn:
+            with self.engine.begin() as conn:
                 exists = conn.execute(text(
                     "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='transactions')"
                 )).scalar()
@@ -322,7 +322,7 @@ def main():
     
     # Fast-skip si deja charge (demo rapide)
     try:
-        with db.engine.connect() as conn:
+        with db.engine.begin() as conn:
             cnt = conn.execute(text("SELECT COUNT(*) FROM transactions")).scalar()
             if cnt and cnt >= 6362620:
                 print(f"Table deja chargee ({cnt:,} lignes) → skip TRUNCATE/LOAD (demo rapide)")

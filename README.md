@@ -8,7 +8,7 @@ Plateforme de suivi et de traitement de transactions numeriques.
 |---------|-------------|-------------------|--------|
 | **V1 — Batch** | Python + PostgreSQL | Extraction, chargement staging, transformation | OK |
 | **V2 — dbt** | dbt + PostgreSQL | Transformation as code, tests, ligneеe | OK |
-| **V3 — Airflow** | Airflow + dbt + PostgreSQL | Orchestration, retries, idempotence | A venir |
+| **V3 — Airflow** | Airflow + PostgreSQL | Orchestration, retries, idempotence (dbt verifie en leger, execution complete en V2) | OK |
 | **V4 — Kafka** | Kafka + PostgreSQL | Streaming temps reel, flux continu | OK |
 | **V5 — Qualite** | Great Expectations + Prometheus | Monitoring, alertes, qualite des donnees | OK |
 
