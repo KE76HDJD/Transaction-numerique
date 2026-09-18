@@ -65,64 +65,80 @@ def get_connection():
 
 
 def collect_metrics():
-    """Collecte les metriques depuis PostgreSQL."""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
+    """Collecte les metriques depuis PostgreSQL.
 
-        # 1. Total rows
-        cursor.execute("SELECT COUNT(*) FROM transactions")
-        total_rows = cursor.fetchone()[0]
-        ROWS_TOTAL.inc(total_rows)
+    Retry 3x (10s) : evite un faux +1 sur PIPELINE_ERRORS quand
+    PostgreSQL redemarre (ex. FATAL: the database system is starting up).
+    """
+    for attempt in range(1, 4):
+        conn = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
 
-        # 2. Fraud rate
-        cursor.execute("SELECT COUNT(*) FROM transactions WHERE is_fraud = 1")
-        fraud_count = cursor.fetchone()[0]
-        fraud_rate = fraud_count / total_rows if total_rows > 0 else 0
-        FRAUD_RATE.set(fraud_rate)
+            # 1. Total rows
+            cursor.execute("SELECT COUNT(*) FROM transactions")
+            total_rows = cursor.fetchone()[0]
+            ROWS_TOTAL.inc(total_rows)
 
-        # 3. Quality score (simplified)
-        # Check null rates
-        cursor.execute("""
-            SELECT 
-                COUNT(*) FILTER (WHERE amount IS NOT NULL) as amount_ok,
-                COUNT(*) FILTER (WHERE type IS NOT NULL) as type_ok,
-                COUNT(*) FILTER (WHERE name_orig IS NOT NULL) as name_ok,
-                COUNT(*) as total
-            FROM transactions
-        """)
-        row = cursor.fetchone()
-        amount_ok, type_ok, name_ok, total = row
+            # 2. Fraud rate
+            cursor.execute("SELECT COUNT(*) FROM transactions WHERE is_fraud = 1")
+            fraud_count = cursor.fetchone()[0]
+            fraud_rate = fraud_count / total_rows if total_rows > 0 else 0
+            FRAUD_RATE.set(fraud_rate)
 
-        null_score = (amount_ok + type_ok + name_ok) / (3 * total) * 100
+            # 3. Quality score (simplified)
+            # Check null rates
+            cursor.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE amount IS NOT NULL) as amount_ok,
+                    COUNT(*) FILTER (WHERE type IS NOT NULL) as type_ok,
+                    COUNT(*) FILTER (WHERE name_orig IS NOT NULL) as name_ok,
+                    COUNT(*) as total
+                FROM transactions
+            """)
+            row = cursor.fetchone()
+            amount_ok, type_ok, name_ok, total = row
 
-        # Check valid types
-        cursor.execute("""
-            SELECT COUNT(*) FROM transactions 
-            WHERE type IN ('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
-        """)
-        valid_types = cursor.fetchone()[0]
-        type_score = valid_types / total * 100
+            null_score = (amount_ok + type_ok + name_ok) / (3 * total) * 100
 
-        # Combined score
-        quality_score = (null_score + type_score) / 2
-        QUALITY_SCORE.set(quality_score)
+            # Check valid types
+            cursor.execute("""
+                SELECT COUNT(*) FROM transactions
+                WHERE type IN ('PAYMENT', 'TRANSFER', 'CASH_OUT', 'CASH_IN', 'DEBIT')
+            """)
+            valid_types = cursor.fetchone()[0]
+            type_score = valid_types / total * 100
 
-        # 4. Expectations (simplified)
-        EXPECTATIONS_PASSED.inc(6)  # 6 passed
-        EXPECTATIONS_FAILED.inc(0)  # 0 failed
+            # Combined score
+            quality_score = (null_score + type_score) / 2
+            QUALITY_SCORE.set(quality_score)
 
-        cursor.close()
-        conn.close()
+            # 4. Expectations (simplified)
+            EXPECTATIONS_PASSED.inc(6)  # 6 passed
+            EXPECTATIONS_FAILED.inc(0)  # 0 failed
 
-        print(f"[{datetime.now().isoformat()}] Metrics collected:")
-        print(f"  Rows: {total_rows:,}")
-        print(f"  Fraud rate: {fraud_rate:.4%}")
-        print(f"  Quality score: {quality_score:.1f}%")
+            cursor.close()
+            conn.close()
 
-    except Exception as e:
-        print(f"Error collecting metrics: {e}")
-        PIPELINE_ERRORS.inc()
+            print(f"[{datetime.now().isoformat()}] Metrics collected:")
+            print(f"  Rows: {total_rows:,}")
+            print(f"  Fraud rate: {fraud_rate:.4%}")
+            print(f"  Quality score: {quality_score:.1f}%")
+            break  # succes : on ne re-collecte pas
+
+        except Exception as e:
+            print(f"[{datetime.now().isoformat()}] Tentative {attempt}/3 echouee : {e}")
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            if attempt < 3:
+                time.sleep(10)
+            else:
+                print(f"[{datetime.now().isoformat()}] Echec collecte apres 3 tentatives")
+                PIPELINE_ERRORS.inc()
 
 
 def main():
