@@ -21,7 +21,9 @@ services:
       PG_DB: transaction_db
       PG_USER: kevin
       PG_PASSWORD: kevin123
-    command: python scripts/run_quality_checks.py
+    command: ["python", "-u", "scripts/run_quality_checks.py"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: "no"
 
   # --- Prometheus ---
@@ -62,7 +64,7 @@ services:
       dockerfile: Dockerfile
     container_name: transaction-metrics
     ports:
-      - "8000:8000"
+      - "8002:8000"
     volumes:
       - .:/app
     environment:
@@ -71,7 +73,9 @@ services:
       PG_DB: transaction_db
       PG_USER: kevin
       PG_PASSWORD: kevin123
-    command: python scripts/export_metrics.py
+    command: ["python", "-u", "scripts/export_metrics.py"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
 volumes:

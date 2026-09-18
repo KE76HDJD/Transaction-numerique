@@ -1,4 +1,6 @@
-great-expectations>=0.18.0
+# Note: pas de lib great-expectations (500 Mo+) — les checks sont
+# implementes en pandas natif (scripts/run_quality_checks.py),
+# le dossier great_expectations/ sert de config (expectations JSON).
 psycopg2-binary>=2.9.0
 pandas>=2.0.0
 prometheus-client>=0.17.0
