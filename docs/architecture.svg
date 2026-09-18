@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" font-family="Inter, 'Segoe UI', Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#475569"/>
+    </marker>
+    <marker id="arrDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#0d9488"/>
+    </marker>
+  </defs>
+
+  <!-- Fond -->
+  <rect x="0" y="0" width="1600" height="1060" fill="#f8fafc"/>
+
+  <!-- Titre -->
+  <text x="40" y="48" font-size="30" font-weight="800" fill="#0f172a">Transaction Data Platform — Architecture V1 → V5</text>
+  <text x="40" y="76" font-size="15" fill="#475569">Batch Python → PostgreSQL → dbt → Airflow → Kafka → Monitoring — 6 362 620 transactions, pipeline 5/5 vert</text>
+
+  <!-- ===== Ligne haute : CSV → V1 → PG ===== -->
+  <!-- CSV source -->
+  <rect x="40" y="110" width="230" height="190" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="60" y="140" font-size="16" font-weight="800" fill="#14532d">SOURCE</text>
+  <text x="60" y="168" font-size="14" font-weight="700" fill="#0f172a">CSV historique</text>
+  <text x="60" y="192" font-size="13" fill="#334155">6 362 620 lignes</text>
+  <text x="60" y="212" font-size="13" fill="#334155">471 Mo, 744 steps</text>
+  <text x="60" y="232" font-size="13" fill="#334155">(1 step = 1 heure)</text>
+  <rect x="60" y="248" width="190" height="30" rx="15" fill="#16a34a"/>
+  <text x="155" y="268" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">data/source/</text>
+
+  <line x1="270" y1="205" x2="306" y2="205" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- V1 -->
+  <rect x="310" y="110" width="330" height="190" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="330" y="140" font-size="16" font-weight="800" fill="#1e3a8a">V1 — BATCH PYTHON</text>
+  <rect x="330" y="150" width="290" height="42" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="342" y="169" font-size="13" font-weight="700" fill="#0f172a">ingest_batch</text>
+  <text x="342" y="186" font-size="12" fill="#475569">découpe 24 steps → 31 lots (data/raw)</text>
+  <rect x="330" y="198" width="290" height="42" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="342" y="217" font-size="13" font-weight="700" fill="#0f172a">transform_transactions</text>
+  <text x="342" y="234" font-size="12" fill="#475569">step → timestamp, snake_case (processed)</text>
+  <rect x="330" y="246" width="290" height="42" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="342" y="265" font-size="13" font-weight="700" fill="#0f172a">database.py (load)</text>
+  <text x="342" y="282" font-size="12" fill="#475569">pool + retry ×3, chunksize 5000, ~8 min</text>
+
+  <!-- Flèche V1 → PG (descend) -->
+  <line x1="475" y1="300" x2="475" y2="326" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- ===== Bande PostgreSQL ===== -->
+  <rect x="40" y="330" width="1520" height="130" rx="12" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+  <text x="60" y="358" font-size="16" font-weight="800" fill="#0f172a">POSTGRESQL :5434 — transaction_db (cœur du système)</text>
+  <rect x="60" y="370" width="355" height="72" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="72" y="394" font-size="13" font-weight="700" fill="#0f172a">transactions</text>
+  <text x="72" y="414" font-size="13" font-weight="800" fill="#2563eb">6 362 620 lignes (V1)</text>
+  <text x="72" y="432" font-size="12" fill="#475569">table brute + 5 index</text>
+  <rect x="431" y="370" width="355" height="72" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="443" y="394" font-size="13" font-weight="700" fill="#0f172a">staging.stg_transactions</text>
+  <text x="443" y="414" font-size="13" font-weight="800" fill="#ea580c">6 362 604 lignes (V2, vue)</text>
+  <text x="443" y="432" font-size="12" fill="#475569">nettoyée (amount &gt; 0)</text>
+  <rect x="802" y="370" width="355" height="72" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="814" y="394" font-size="13" font-weight="700" fill="#0f172a">marts.mart_transactions</text>
+  <text x="814" y="414" font-size="13" font-weight="800" fill="#ea580c">31 lignes / jour (V2, table)</text>
+  <text x="814" y="432" font-size="12" fill="#475569">business-ready, triée par date</text>
+  <rect x="1173" y="370" width="355" height="72" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="1185" y="394" font-size="13" font-weight="700" fill="#0f172a">transactions_streamed</text>
+  <text x="1185" y="414" font-size="13" font-weight="800" fill="#7c3aed">flux continu (V4)</text>
+  <text x="1185" y="432" font-size="12" fill="#475569">+ kafka_offset / partition</text>
+
+  <!-- ===== Ligne mid : V2 / V3 / V4 ===== -->
+  <!-- V2 -->
+  <rect x="40" y="490" width="360" height="190" rx="12" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="60" y="520" font-size="16" font-weight="800" fill="#7c2d12">V2 — DBT 1.12</text>
+  <text x="60" y="546" font-size="13" fill="#0f172a">stg_transactions <tspan font-weight="700">(view)</tspan> → int_daily_agg</text>
+  <text x="60" y="566" font-size="13" fill="#0f172a"><tspan font-weight="700">(ephemeral)</tspan> → mart_transactions <tspan font-weight="700">(table)</tspan></text>
+  <text x="60" y="592" font-size="13" font-weight="700" fill="#15803d">23/23 tests PASS • docs + lineage</text>
+  <rect x="60" y="604" width="320" height="30" rx="15" fill="#334155"/>
+  <text x="220" y="624" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Lit + écrit : PostgreSQL ↑</text>
+  <text x="60" y="662" font-size="12" fill="#64748b">dbt run 58s • dbt test 3 min 30</text>
+  <line x1="220" y1="490" x2="220" y2="460" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- V3 -->
+  <rect x="430" y="490" width="500" height="190" rx="12" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+  <text x="450" y="520" font-size="16" font-weight="800" fill="#134e4a">V3 — AIRFLOW :8082</text>
+  <text x="450" y="546" font-size="13" font-weight="700" fill="#0f172a">DAG transaction_pipeline</text>
+  <text x="450" y="570" font-size="13" fill="#0f172a">ingest → transform → load → dbt_run → dbt_test</text>
+  <text x="450" y="594" font-size="13" font-weight="700" fill="#15803d">run 5/5 SUCCESS (~5 min, fast-skip)</text>
+  <rect x="450" y="606" width="460" height="30" rx="15" fill="#334155"/>
+  <text x="680" y="626" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Orchestre V1 + vérifie PG (retry ×2) ↑</text>
+  <text x="450" y="664" font-size="12" fill="#64748b">LocalExecutor • logs par tâche • admin/admin</text>
+  <line x1="680" y1="490" x2="680" y2="460" stroke="#0d9488" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrDash)"/>
+
+  <!-- V4 -->
+  <rect x="960" y="490" width="600" height="190" rx="12" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="980" y="520" font-size="16" font-weight="800" fill="#4c1d95">V4 — KAFKA TEMPS RÉEL</text>
+  <rect x="980" y="532" width="170" height="60" rx="8" fill="#ffffff" stroke="#a78bfa"/>
+  <text x="990" y="554" font-size="12" font-weight="700" fill="#0f172a">producer</text>
+  <text x="990" y="572" font-size="11" fill="#475569">CSV → 1 JSON/msg</text>
+  <text x="990" y="586" font-size="11" fill="#475569">acks=all, 0.1-0.5s</text>
+  <line x1="1150" y1="562" x2="1174" y2="562" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="1178" y="532" width="170" height="60" rx="8" fill="#7c3aed"/>
+  <text x="1263" y="554" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">topic 'transactions'</text>
+  <text x="1263" y="572" font-size="11" fill="#e9d5ff" text-anchor="middle">broker :29092 / :9092</text>
+  <text x="1263" y="586" font-size="11" fill="#e9d5ff" text-anchor="middle">offset 0..N</text>
+  <line x1="1348" y1="562" x2="1372" y2="562" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="1376" y="532" width="164" height="60" rx="8" fill="#ffffff" stroke="#a78bfa"/>
+  <text x="1386" y="554" font-size="12" font-weight="700" fill="#0f172a">consumer</text>
+  <text x="1386" y="572" font-size="11" fill="#475569">group + INSERT</text>
+  <text x="1386" y="586" font-size="11" fill="#475569">commit offset</text>
+  <rect x="980" y="604" width="560" height="30" rx="15" fill="#334155"/>
+  <text x="1260" y="624" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">Écrit : PG.transactions_streamed ↑ • UI :8081</text>
+  <text x="980" y="664" font-size="12" fill="#64748b">lag = retard du group • at-least-once • 0 perte (offsets 0-1104+)</text>
+  <line x1="1300" y1="490" x2="1300" y2="460" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- ===== V5 ===== -->
+  <rect x="40" y="710" width="1520" height="170" rx="12" fill="#ffe4e6" stroke="#e11d48" stroke-width="2"/>
+  <text x="60" y="740" font-size="16" font-weight="800" fill="#881337">V5 — QUALITÉ &amp; MONITORING (lit PostgreSQL)</text>
+  <rect x="60" y="752" width="330" height="100" rx="8" fill="#ffffff" stroke="#fda4af"/>
+  <text x="72" y="776" font-size="13" font-weight="700" fill="#0f172a">Great Expectations (8 checks)</text>
+  <text x="72" y="796" font-size="12" fill="#475569">not_null • in_set • between</text>
+  <text x="72" y="814" font-size="12" fill="#475569">regex • unique • row_count</text>
+  <text x="72" y="834" font-size="12" font-weight="700" fill="#15803d">8/8 PASS • score 100 %</text>
+  <line x1="390" y1="802" x2="414" y2="802" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="418" y="752" width="330" height="100" rx="8" fill="#ffffff" stroke="#fda4af"/>
+  <text x="430" y="776" font-size="13" font-weight="700" fill="#0f172a">Exporter :8002 (tx_*)</text>
+  <text x="430" y="796" font-size="12" fill="#475569">quality_score • rows_total</text>
+  <text x="430" y="814" font-size="12" fill="#475569">fraud_rate • errors • latency</text>
+  <text x="430" y="834" font-size="12" fill="#475569">scrape 30s</text>
+  <line x1="748" y1="802" x2="772" y2="802" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="776" y="752" width="330" height="100" rx="8" fill="#ffffff" stroke="#fda4af"/>
+  <text x="788" y="776" font-size="13" font-weight="700" fill="#0f172a">Prometheus :9090</text>
+  <text x="788" y="796" font-size="12" fill="#475569">TSDB + 4 alertes</text>
+  <text x="788" y="814" font-size="12" fill="#475569">(qualité &lt; 80, fraude,</text>
+  <text x="788" y="832" font-size="12" fill="#475569">erreurs, service down)</text>
+  <line x1="1106" y1="802" x2="1130" y2="802" stroke="#475569" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="1134" y="752" width="406" height="100" rx="8" fill="#e11d48"/>
+  <text x="1337" y="776" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">Grafana :3000 — 6 panels</text>
+  <text x="1337" y="796" font-size="12" fill="#ffe4e6" text-anchor="middle">Score • Rows • Fraud • Errors</text>
+  <text x="1337" y="814" font-size="12" fill="#ffe4e6" text-anchor="middle">Latency • Expectations (auto-refresh)</text>
+  <text x="1337" y="834" font-size="12" fill="#ffe4e6" text-anchor="middle">admin / admin</text>
+
+  <!-- ===== Footer : accès + preuves ===== -->
+  <rect x="40" y="910" width="760" height="120" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="60" y="938" font-size="15" font-weight="800" fill="#0f172a">ACCÈS (URLs locales)</text>
+  <text x="60" y="962" font-size="13" fill="#334155">:5434 psql (données) • :8082 Airflow (admin/admin) • :8081 Kafka-UI</text>
+  <text x="60" y="984" font-size="13" fill="#334155">:9090 Prometheus • :3000 Grafana (admin/admin) • :8002 Exporter</text>
+  <text x="60" y="1006" font-size="12" fill="#64748b">:8000 occupé par un autre projet — exporter remappé :8002</text>
+  <rect x="820" y="910" width="740" height="120" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="840" y="938" font-size="15" font-weight="800" fill="#0f172a">PREUVES (artefacts versionnés)</text>
+  <text x="840" y="962" font-size="13" fill="#334155">V1 : 16 tests pytest • V2 : run_results.json 23/23 + lineage index.html</text>
+  <text x="840" y="984" font-size="13" fill="#334155">V3 : run Airflow 5/5 success • V4 : offsets 0..N continus • V5 : quality 8/8</text>
+  <text x="840" y="1006" font-size="12" fill="#64748b">Règle thermique : une stack à la fois, sensors &lt; 90 °C</text>
+</svg>
